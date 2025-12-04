@@ -2,8 +2,8 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Sneaker - Hand Control Only</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AR Sneaker - Mobile Optimized</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
 
@@ -12,150 +12,115 @@
             overflow: hidden;
             background-color: #000;
             font-family: 'Rajdhani', sans-serif;
-            user-select: none; /* 禁止选中文本 */
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
         }
 
         #canvas-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            z-index: 1;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1;
         }
 
-        /* Loading Screen */
-        #loader {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        /* --- 启动页 (解决手机自动播放限制) --- */
+        #start-screen {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             background: #000;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            color: #0ff;
-            z-index: 999;
-            transition: opacity 0.5s;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            z-index: 2000; transition: opacity 0.5s;
+        }
+        .start-btn {
+            padding: 15px 40px; border: 2px solid #0ff; background: rgba(0,255,255,0.1);
+            color: #0ff; font-family: 'Orbitron'; font-size: 1.2rem; cursor: pointer;
+            box-shadow: 0 0 20px rgba(0,255,255,0.3); animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0% { box-shadow: 0 0 10px rgba(0,255,255,0.2); } 50% { box-shadow: 0 0 25px rgba(0,255,255,0.6); } 100% { box-shadow: 0 0 10px rgba(0,255,255,0.2); } }
+
+        /* --- 加载层 --- */
+        #loader {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9); display: none; /* 默认隐藏，点击后显示 */
+            flex-direction: column; justify-content: center; align-items: center;
+            color: #0ff; z-index: 1000;
         }
         .spinner {
-            width: 60px;
-            height: 60px;
-            border: 4px solid rgba(0, 255, 255, 0.2);
-            border-top: 4px solid #0ff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            box-shadow: 0 0 15px #0ff;
+            width: 40px; height: 40px; border: 3px solid #333; border-top: 3px solid #0ff;
+            border-radius: 50%; animation: spin 0.8s linear infinite; margin-bottom: 20px;
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        /* HUD / UI Overlay */
-        #hud-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none; /* 让鼠标穿透UI */
-            z-index: 10;
+        /* --- 顶部状态栏 --- */
+        #status-bar {
+            position: absolute; top: 10px; right: 10px; left: 10px;
+            display: flex; justify-content: space-between;
+            font-family: monospace; font-size: 12px;
+            color: rgba(0, 255, 255, 0.8); z-index: 10; pointer-events: none;
         }
 
-        /* Status Indicator (Top Right) */
-        #system-status {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            text-align: right;
-            font-family: monospace;
-            color: #0f0;
-            background: rgba(0, 20, 0, 0.6);
-            padding: 10px;
-            border: 1px solid #0f0;
-        }
-        .blink { animation: blinker 1s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
-
-        /* Sci-Fi Product Panel (Bottom Left) */
+        /* --- 响应式产品信息面板 --- */
         #info-panel {
-            position: absolute;
-            bottom: 10%;
-            left: 5%;
-            width: 380px;
-            padding: 25px;
+            position: absolute; 
+            z-index: 10;
             background: rgba(5, 15, 25, 0.9);
-            border-left: 6px solid #0ff;
-            clip-path: polygon(0 0, 100% 0, 100% 85%, 92% 100%, 0 100%);
-            transform: translateX(-150%);
-            transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
-            backdrop-filter: blur(8px);
-            box-shadow: 0 0 30px rgba(0, 255, 255, 0.15);
+            border: 1px solid rgba(0, 255, 255, 0.3);
+            border-left: 4px solid #0ff;
+            backdrop-filter: blur(10px);
+            color: #fff;
+            transform: translateY(150%);
+            transition: transform 0.4s cubic-bezier(0.19, 1, 0.22, 1);
+            
+            /* 手机端样式：底部卡片 */
+            bottom: 20px; left: 5%; width: 90%; box-sizing: border-box; padding: 20px;
+            border-radius: 10px 0 10px 0;
         }
 
-        #info-panel.active {
-            transform: translateX(0);
+        /* 大屏幕适配 */
+        @media (min-width: 768px) {
+            #info-panel {
+                bottom: 50px; left: 50px; width: 350px;
+                transform: translateX(-150%);
+                clip-path: polygon(0 0, 100% 0, 100% 85%, 90% 100%, 0 100%);
+                border-radius: 0;
+            }
+            #info-panel.active { transform: translateX(0); }
         }
 
-        .panel-header {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 1.8rem;
-            color: #0ff;
-            text-transform: uppercase;
-            margin-bottom: 15px;
-            text-shadow: 0 0 8px rgba(0, 255, 255, 0.6);
-            border-bottom: 1px solid rgba(0, 255, 255, 0.3);
-            padding-bottom: 10px;
-        }
+        /* 手机端激活状态 */
+        #info-panel.active { transform: translateY(0); }
 
-        .data-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 1.1rem;
-        }
-        .data-label { color: #5aa; font-weight: 300; }
-        .data-val { color: #fff; font-weight: 700; }
-
-        .price-tag {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 2.2rem;
-            color: #f0f;
-            text-align: right;
-            margin-top: 20px;
-            text-shadow: 0 0 10px rgba(255, 0, 255, 0.4);
-        }
+        .p-title { font-family: 'Orbitron'; font-size: 1.4rem; color: #0ff; margin-bottom: 10px; }
+        .p-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 0.9rem; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px; }
+        .p-price { font-family: 'Orbitron'; font-size: 1.8rem; color: #f0f; text-align: right; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <!-- Loading Screen -->
+    <!-- 1. 启动页 (必须有点击动作才能在手机播放视频) -->
+    <div id="start-screen">
+        <h1 style="color:white; font-family:'Orbitron'; margin-bottom:30px;">AR SHOWCASE</h1>
+        <div class="start-btn" onclick="startApp()">TAP TO START</div>
+        <p style="color:#666; font-size:12px; margin-top:20px;">Use in bright light • Show your hand</p>
+    </div>
+
+    <!-- 2. 加载页 -->
     <div id="loader">
         <div class="spinner"></div>
-        <h2 style="font-family: 'Orbitron'; letter-spacing: 2px; margin-top:20px;">SYSTEM BOOT</h2>
-        <p id="loader-text" style="color:#666; font-size:12px;">Initializing Neural Network...</p>
+        <div id="loader-text">CONNECTING...</div>
     </div>
 
-    <!-- UI Layer -->
-    <div id="hud-overlay">
-        <div id="system-status">
-            SYSTEM: <span id="sys-state">OFFLINE</span><br>
-            INPUT: <span id="input-state">WAITING</span>
-        </div>
-
-        <div id="info-panel">
-            <div class="panel-header" id="p-name">Loading...</div>
-            <div class="data-row"><span class="data-label">MODEL CODE</span><span class="data-val" id="p-code">---</span></div>
-            <div class="data-row"><span class="data-label">SIZE RUN</span><span class="data-val" id="p-size">US 7-13</span></div>
-            <div class="data-row"><span class="data-label">TECH SPEC</span><span class="data-val" id="p-tech">---</span></div>
-            <div class="price-tag" id="p-price">$---</div>
-        </div>
+    <!-- 3. UI 界面 -->
+    <div id="status-bar">
+        <span>CAM: ACTIVE</span>
+        <span id="gesture-state">WAITING...</span>
     </div>
 
-    <!-- 3D Canvas -->
     <div id="canvas-container"></div>
 
-    <!-- Import Map -->
+    <div id="info-panel">
+        <div class="p-title" id="p-name">LOADING</div>
+        <div class="p-row"><span>CODE</span><span id="p-code">---</span></div>
+        <div class="p-row"><span>TECH</span><span id="p-tech">---</span></div>
+        <div class="p-price" id="p-price">$---</div>
+    </div>
+
     <script type="importmap">
         {
             "imports": {
@@ -169,7 +134,10 @@
         import * as THREE from 'three';
         import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-        // --- 1. 配置数据 ---
+        // --- 配置 ---
+        // 强制使用 Lite 模型 (体积更小，速度更快)
+        const MODEL_URL = "https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task";
+        
         const IMAGE_URLS = [
             "https://static.nike.com/a/images/q_auto:eco/t_product_v1/f_auto/dpr_1.0/h_594,c_limit/3989822d-5079-4b58-95cc-d884a12d5be8/%E3%83%8A%E3%82%A4%E3%82%AD-%E3%82%A8%E3%82%A2-%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B9-1-07-%E3%82%A6%E3%82%A3%E3%83%A1%E3%83%B3%E3%82%BA%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA-Csdlzsbt.png",
             "https://static.nike.com/a/images/q_auto:eco/t_product_v1/f_auto/dpr_1.0/h_594,c_limit/c5f06bdd-914b-4197-96bc-37d67b34c054/%E3%83%8A%E3%82%A4%E3%82%AD-%E3%82%A8%E3%82%A2-%E3%83%AA%E3%83%95%E3%83%88-%E3%82%A6%E3%82%A3%E3%83%A1%E3%83%B3%E3%82%BA%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA-ASOdehTz.png",
@@ -177,143 +145,124 @@
             "https://www.skechers.com/dw/image/v2/BDCN_PRD/on/demandware.static/-/Library-Sites-SkechersSharedLibrary/default/dweddf4f88/images/2025-Images/Landing-Pages/boot-bf-space.jpg?sw=3000",
             "https://images.skechers.com/image;width=400%2Cformat=auto/177197_NVY_HERO_LG"
         ];
-
         const PRODUCT_DATA = [
-            { name: "NIKE AIR FORCE 1", code: "DD8959-100", price: "$110.00", tech: "AIR SOLE" },
-            { name: "NIKE AIR RIFT", code: "DN1338-001", price: "$100.00", tech: "SPLIT TOE" },
-            { name: "SALOMON XT-GTX", code: "L47861800", price: "$160.00", tech: "GORE-TEX" },
-            { name: "SKECHERS BOOT", code: "SKX-2025", price: "$85.00", tech: "MEMORY FOAM" },
-            { name: "SKECHERS HERO", code: "177197", price: "$75.00", tech: "ARCH FIT" }
+            { name: "NIKE AF1", code: "DD8959", price: "$110", tech: "AIR" },
+            { name: "NIKE RIFT", code: "DN1338", price: "$100", tech: "SPLIT" },
+            { name: "SALOMON XT", code: "L4786", price: "$160", tech: "GTX" },
+            { name: "SKECHERS", code: "SKX25", price: "$85", tech: "FOAM" },
+            { name: "SKECHERS", code: "177197", price: "$75", tech: "ARCH" }
         ];
 
-        // --- 2. 全局变量 ---
-        let scene, camera, renderer;
-        let video, videoTexture;
-        let handLandmarker;
-        let lastVideoTime = -1;
-
-        // 轮播逻辑
-        const cards = [];
+        let scene, camera, renderer, video, handLandmarker;
+        let lastTime = -1;
+        
+        // 交互变量
         const group = new THREE.Group();
-        const CARD_WIDTH = 3.5;
-        const GAP = 1.5;
-        const TOTAL_WIDTH = (CARD_WIDTH + GAP) * IMAGE_URLS.length;
-        
-        // 状态逻辑
+        const cards = [];
+        const CARD_W = 3.5;
+        const GAP = 1.0;
         let scrollOffset = 0;
-        let baseSpeed = 0.01;      // 基础自动滚动速度
-        let gestureSpeed = 0;      // 手势带来的额外速度
-        let isZooming = false;     // 是否正在捏合放大
-        let focusedIndex = -1;     // 当前聚焦的产品索引
+        let speed = 0.01;
+        let gestureSpeed = 0;
+        let isZooming = false;
         
-        // DOM 元素
+        // DOM
+        const statusEl = document.getElementById('gesture-state');
+        const uiPanel = document.getElementById('info-panel');
         const loader = document.getElementById('loader');
         const loaderText = document.getElementById('loader-text');
-        const sysState = document.getElementById('sys-state');
-        const inputState = document.getElementById('input-state');
-        const uiPanel = document.getElementById('info-panel');
 
-        // --- 3. 初始化 ---
+        // 暴露给全局以便点击调用
+        window.startApp = async () => {
+            document.getElementById('start-screen').style.display = 'none';
+            loader.style.display = 'flex';
+            
+            try {
+                await init();
+                loader.style.display = 'none';
+            } catch (e) {
+                console.error(e);
+                loaderText.innerText = "FAILED: " + e.message;
+                loaderText.style.color = 'red';
+            }
+        }
+
         async function init() {
-            // A. 设置 Three.js 场景
+            // 1. 初始化 3D 场景
             scene = new THREE.Scene();
-            camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-            camera.position.z = 10;
+            
+            // 摄像机适配：手机端(竖屏)需要把相机拉远，否则物体太大
+            const aspect = window.innerWidth / window.innerHeight;
+            camera = new THREE.PerspectiveCamera(50, aspect, 0.1, 100);
+            if (aspect < 1) {
+                // 竖屏模式 (手机)
+                camera.position.z = 18; // 拉远
+            } else {
+                // 横屏模式 (电脑)
+                camera.position.z = 10;
+            }
 
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // 限制像素比以提升手机性能
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // B. 加载图片并创建 3D 卡片
-            const textureLoader = new THREE.TextureLoader();
-            textureLoader.crossOrigin = 'Anonymous';
-
+            // 2. 加载图片
+            const texLoader = new THREE.TextureLoader();
+            texLoader.crossOrigin = 'anonymous';
+            
             IMAGE_URLS.forEach((url, i) => {
-                textureLoader.load(url, (texture) => {
-                    texture.colorSpace = THREE.SRGBColorSpace;
-                    const aspect = texture.image.width / texture.image.height;
-                    
-                    // 创建平面
-                    const geometry = new THREE.PlaneGeometry(CARD_WIDTH, CARD_WIDTH / aspect);
-                    const material = new THREE.MeshBasicMaterial({ 
-                        map: texture, 
-                        transparent: true, 
-                        side: THREE.DoubleSide
-                    });
-                    
-                    const mesh = new THREE.Mesh(geometry, material);
-                    mesh.userData = { id: i }; // 绑定 ID
-                    
-                    // 初始位置
-                    mesh.position.x = i * (CARD_WIDTH + GAP);
-                    
+                texLoader.load(url, tex => {
+                    tex.colorSpace = THREE.SRGBColorSpace;
+                    const imgAspect = tex.image.width / tex.image.height;
+                    const geo = new THREE.PlaneGeometry(CARD_W, CARD_W / imgAspect);
+                    const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, side: THREE.DoubleSide });
+                    const mesh = new THREE.Mesh(geo, mat);
+                    mesh.userData = { id: i };
+                    mesh.position.x = i * (CARD_W + GAP);
                     group.add(mesh);
                     cards.push(mesh);
                 });
             });
             scene.add(group);
 
-            // C. 启动摄像头
-            await setupWebcam();
-
-            // D. 加载 AI 模型
-            try {
-                await setupMediaPipe();
-                // 加载成功
-                loader.style.opacity = 0;
-                setTimeout(() => loader.remove(), 500);
-                sysState.innerText = "ONLINE";
-                sysState.style.color = "#0f0";
-            } catch (error) {
-                console.error(error);
-                loaderText.innerText = "FATAL ERROR: AI MODEL DOWNLOAD FAILED";
-                loaderText.style.color = "#f00";
-                sysState.innerText = "NET_ERR";
-                sysState.style.color = "#f00";
-                alert("AI模型加载失败。请确保你的网络可以访问 Google 服务 (VPN)。");
-            }
-
-            // E. 开始渲染循环
-            animate();
-            window.addEventListener('resize', onWindowResize);
-        }
-
-        // --- 4. 摄像头设置 ---
-        async function setupWebcam() {
-            loaderText.innerText = "ACCESSING OPTICAL SENSORS...";
+            // 3. 摄像头 (关键：手机必须请求 correct facingMode)
             video = document.createElement('video');
+            video.playsInline = true; // iOS 必须
+            video.muted = true;
             video.autoplay = true;
-            video.playsInline = true;
-            video.muted = true; // 必须静音才能自动播放
 
-            const stream = await navigator.mediaDevices.getUserMedia({ 
-                video: { width: 1280, height: 720, facingMode: "user" } 
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user', // 前置摄像头
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
             });
             video.srcObject = stream;
-            
-            await new Promise((resolve) => { video.onloadedmetadata = resolve; });
+            await new Promise(r => video.onloadedmetadata = r);
             video.play();
 
-            // 创建视频背景
-            videoTexture = new THREE.VideoTexture(video);
-            videoTexture.colorSpace = THREE.SRGBColorSpace;
-            const bgGeo = new THREE.PlaneGeometry(25, 15);
-            const bgMat = new THREE.MeshBasicMaterial({ map: videoTexture, depthWrite: false });
+            // 视频背景适配
+            const vidTex = new THREE.VideoTexture(video);
+            vidTex.colorSpace = THREE.SRGBColorSpace;
+            const bgGeo = new THREE.PlaneGeometry(20, 20 * (1/aspect)); // 保证覆盖
+            const bgMat = new THREE.MeshBasicMaterial({ map: vidTex, depthWrite: false });
             const bgMesh = new THREE.Mesh(bgGeo, bgMat);
-            bgMesh.position.z = -5; // 放在最后面
+            bgMesh.position.z = -10;
             
-            // 保持背景比例适配屏幕
-            const aspect = window.innerWidth / window.innerHeight;
-            if (aspect > 1) bgMesh.scale.set(aspect, 1, 1);
-            else bgMesh.scale.set(1, 1/aspect, 1);
-            
+            // 简单的 Cover 算法
+            const vidAspect = video.videoWidth / video.videoHeight;
+            const screenAspect = window.innerWidth / window.innerHeight;
+            if (screenAspect > vidAspect) {
+                bgMesh.scale.set(screenAspect / vidAspect, 1, 1);
+            } else {
+                bgMesh.scale.set(1, vidAspect / screenAspect, 1);
+            }
             scene.add(bgMesh);
-        }
 
-        // --- 5. MediaPipe AI 设置 ---
-        async function setupMediaPipe() {
-            loaderText.innerText = "DOWNLOADING NEURAL MODELS (This may take time)...";
+            // 4. 加载 AI (使用轻量化设置)
+            loaderText.innerText = "LOADING AI (LITE)...";
             
             const vision = await FilesetResolver.forVisionTasks(
                 "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
@@ -321,168 +270,122 @@
             
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
-                    modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
-                    delegate: "CPU" // 使用 CPU 以获得最大兼容性，避免 GPU 崩溃
+                    modelAssetPath: MODEL_URL, 
+                    delegate: "CPU" // 手机浏览器对 GPU 推理支持不稳定，CPU 最安全
                 },
                 runningMode: "VIDEO",
-                numHands: 1 // 只追踪一只手
-            });
-        }
-
-        // --- 6. 手势识别逻辑 ---
-        function detectGestures() {
-            if (!handLandmarker || !video) return;
-
-            // 只有当视频帧更新时才检测
-            if (video.currentTime !== lastVideoTime) {
-                lastVideoTime = video.currentTime;
-                const results = handLandmarker.detectForVideo(video, performance.now());
-
-                if (results.landmarks && results.landmarks.length > 0) {
-                    const lm = results.landmarks[0]; // 获取第一只手
-                    
-                    // === 逻辑 1: 捏合检测 (Zoom) ===
-                    // 计算拇指指尖(4) 和 食指指尖(8) 的距离
-                    const thumb = lm[4];
-                    const index = lm[8];
-                    const distance = Math.sqrt(
-                        Math.pow(thumb.x - index.x, 2) + 
-                        Math.pow(thumb.y - index.y, 2)
-                    );
-
-                    // 距离小于 0.05 视为捏合
-                    if (distance < 0.05) {
-                        isZooming = true;
-                        inputState.innerText = "ANALYZING (PINCH)";
-                        inputState.style.color = "#f0f";
-                    } else {
-                        isZooming = false;
-                        inputState.innerText = "SCROLLING";
-                        inputState.style.color = "#0ff";
-                    }
-
-                    // === 逻辑 2: 速度控制 (Scroll) ===
-                    // 获取手掌中心 X 坐标 (9号点是中指根部)
-                    const handX = lm[9].x;
-                    // 屏幕中心是 0.5。
-                    // 如果手在左边 (x > 0.5, 镜像反转), 向左加速
-                    // 如果手在右边 (x < 0.5), 向右加速
-                    // 简单的映射: (0.5 - handX)
-                    const speedFactor = (0.5 - handX); 
-                    gestureSpeed = speedFactor * 0.3; // 0.3 是灵敏度系数
-
-                } else {
-                    // 没检测到手
-                    gestureSpeed = 0;
-                    isZooming = false;
-                    inputState.innerText = "NO SIGNAL";
-                    inputState.style.color = "#555";
-                }
-            }
-        }
-
-        // --- 7. 更新 3D 场景与 UI ---
-        function updateScene() {
-            // 1. 处理滚动位置
-            if (!isZooming) {
-                // 如果没有捏合，应用滚动速度
-                scrollOffset -= (baseSpeed + gestureSpeed);
-                // 隐藏详情面板
-                uiPanel.classList.remove('active');
-            }
-
-            // 2. 遍历卡片，计算它们的位置
-            let minDistanceToCenter = 9999;
-            let centerMesh = null;
-
-            cards.forEach((mesh, index) => {
-                // 无限滚动算法：计算虚拟位置
-                let virtualX = (index * (CARD_WIDTH + GAP) + scrollOffset) % TOTAL_WIDTH;
-                
-                // 修正边界，让滚动看起来是循环的
-                if (virtualX > TOTAL_WIDTH / 2) virtualX -= TOTAL_WIDTH;
-                if (virtualX < -TOTAL_WIDTH / 2) virtualX += TOTAL_WIDTH;
-
-                // 目标位置
-                const targetX = virtualX;
-                const targetY = 0;
-                const targetZ = 0;
-                const targetScale = 1;
-                const targetRotY = 0;
-
-                // 如果处于普通模式 (非捏合)
-                if (!isZooming) {
-                    // 平滑插值 (Lerp) 移动到目标位置
-                    mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, targetX, 0.1);
-                    mesh.position.y = THREE.MathUtils.lerp(mesh.position.y, targetY, 0.1);
-                    mesh.position.z = THREE.MathUtils.lerp(mesh.position.z, targetZ, 0.1);
-                    mesh.scale.setScalar(THREE.MathUtils.lerp(mesh.scale.x, targetScale, 0.1));
-                    mesh.rotation.y = THREE.MathUtils.lerp(mesh.rotation.y, targetRotY, 0.1);
-                    
-                    // 恢复透明度
-                    mesh.material.opacity = THREE.MathUtils.lerp(mesh.material.opacity, 1.0, 0.1);
-                }
-
-                // 记录离屏幕中心最近的物体
-                const dist = Math.abs(mesh.position.x);
-                if (dist < minDistanceToCenter) {
-                    minDistanceToCenter = dist;
-                    centerMesh = mesh;
-                    focusedIndex = mesh.userData.id;
-                }
+                numHands: 1,
+                minHandDetectionConfidence: 0.5
             });
 
-            // 3. 处理捏合放大模式
-            if (isZooming && centerMesh) {
-                // 将最近的物体移动到正中心、放大、且稍微靠近镜头
-                centerMesh.position.x = THREE.MathUtils.lerp(centerMesh.position.x, 0, 0.15);
-                centerMesh.position.y = THREE.MathUtils.lerp(centerMesh.position.y, 0.5, 0.15); // 稍微抬高，为了不挡住字
-                centerMesh.position.z = THREE.MathUtils.lerp(centerMesh.position.z, 4, 0.15); // 靠近摄像机
-                
-                centerMesh.scale.setScalar(THREE.MathUtils.lerp(centerMesh.scale.x, 1.8, 0.15)); // 放大
-                centerMesh.rotation.y += 0.005; // 缓慢自转
-
-                // 其他物体推远并变淡
-                cards.forEach(m => {
-                    if (m !== centerMesh) {
-                        m.position.z = THREE.MathUtils.lerp(m.position.z, -5, 0.1);
-                        m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, 0.1, 0.1);
-                    }
-                });
-
-                // 更新并显示 UI
-                updateUI(focusedIndex);
-                uiPanel.classList.add('active');
-            }
-        }
-
-        // 更新 UI 数据
-        function updateUI(index) {
-            const data = PRODUCT_DATA[index];
-            if (!data) return;
-
-            document.getElementById('p-name').innerText = data.name;
-            document.getElementById('p-code').innerText = data.code;
-            document.getElementById('p-price').innerText = data.price;
-            document.getElementById('p-tech').innerText = data.tech;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
+            animate();
+            
+            // 监听屏幕旋转
+            window.addEventListener('resize', () => {
+                const newAspect = window.innerWidth / window.innerHeight;
+                camera.aspect = newAspect;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+                // 重新调整相机距离
+                camera.position.z = newAspect < 1 ? 18 : 10;
+            });
         }
 
         function animate() {
             requestAnimationFrame(animate);
-            detectGestures();
-            updateScene();
+
+            // AI 检测
+            if (handLandmarker && video.readyState >= 2) {
+                if (video.currentTime !== lastTime) {
+                    lastTime = video.currentTime;
+                    const res = handLandmarker.detectForVideo(video, performance.now());
+                    
+                    if (res.landmarks.length > 0) {
+                        const lm = res.landmarks[0];
+                        
+                        // 1. 捏合检测
+                        const dist = Math.hypot(lm[4].x - lm[8].x, lm[4].y - lm[8].y);
+                        if (dist < 0.06) {
+                            isZooming = true;
+                            statusEl.innerText = "ZOOMING";
+                            statusEl.style.color = "#f0f";
+                        } else {
+                            isZooming = false;
+                            statusEl.innerText = "SCROLLING";
+                            statusEl.style.color = "#0ff";
+                        }
+
+                        // 2. 速度控制 (注意：手机前置摄像头通常是镜像的)
+                        const handX = lm[9].x; 
+                        gestureSpeed = (0.5 - handX) * 0.4; // 增加手机端的灵敏度
+                        
+                    } else {
+                        gestureSpeed = 0;
+                        isZooming = false;
+                        statusEl.innerText = "NO HAND";
+                        statusEl.style.color = "#888";
+                    }
+                }
+            }
+
+            // 场景更新
+            if (!isZooming) {
+                scrollOffset -= (speed + gestureSpeed);
+                uiPanel.classList.remove('active');
+            }
+
+            let minDist = 9999, centerMesh = null;
+            const totalW = cards.length * (CARD_W + GAP);
+
+            cards.forEach((mesh, idx) => {
+                let vx = (idx * (CARD_W + GAP) + scrollOffset) % totalW;
+                if(vx > totalW/2) vx -= totalW;
+                if(vx < -totalW/2) vx += totalW;
+
+                if (!isZooming) {
+                    mesh.position.set(vx, 0, 0);
+                    mesh.scale.setScalar(1);
+                    mesh.rotation.y = 0;
+                    mesh.material.opacity = 1;
+                }
+
+                if(Math.abs(mesh.position.x) < minDist) {
+                    minDist = Math.abs(mesh.position.x);
+                    centerMesh = mesh;
+                }
+            });
+
+            if (isZooming && centerMesh) {
+                // 手机端放大参数调整
+                const isPortrait = window.innerWidth < window.innerHeight;
+                const zoomZ = isPortrait ? 10 : 4; // 手机上不要飞得太近，否则爆屏
+                const zoomY = isPortrait ? 1.5 : 0.5; // 手机上抬高一点给文字留位置
+
+                centerMesh.position.lerp(new THREE.Vector3(0, zoomY, zoomZ), 0.1);
+                centerMesh.scale.setScalar(THREE.MathUtils.lerp(centerMesh.scale.x, 1.8, 0.1));
+                centerMesh.rotation.y += 0.01;
+
+                // 模糊背景卡片
+                cards.forEach(m => {
+                    if(m !== centerMesh) {
+                        m.position.z = THREE.MathUtils.lerp(m.position.z, -10, 0.1);
+                        m.material.opacity = 0.2;
+                    }
+                });
+
+                // 更新 UI
+                const data = PRODUCT_DATA[centerMesh.userData.id];
+                if (data) {
+                    document.getElementById('p-name').innerText = data.name;
+                    document.getElementById('p-code').innerText = data.code;
+                    document.getElementById('p-tech').innerText = data.tech;
+                    document.getElementById('p-price').innerText = data.price;
+                    uiPanel.classList.add('active');
+                }
+            }
+            
             renderer.render(scene, camera);
         }
-
-        // 启动系统
-        init();
-
     </script>
 </body>
 </html>
