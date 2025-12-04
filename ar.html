@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AR Sneaker Showcase - Three.js + MediaPipe</title>
+    <title>AR Sneaker Showcase - Hybrid Input</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Rajdhani:wght@300;500;700&display=swap');
 
@@ -63,7 +63,7 @@
             border-bottom: 1px solid rgba(0, 255, 255, 0.3);
             backdrop-filter: blur(10px);
             color: #fff;
-            transform: translateX(-150%); /* Hidden by default */
+            transform: translateX(-150%);
             transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
             z-index: 10;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
@@ -131,6 +131,7 @@
             padding: 5px 10px;
             z-index: 10;
             border: 1px solid #0f0;
+            text-align: right;
         }
     </style>
 </head>
@@ -138,15 +139,14 @@
 
     <div id="loader">
         <div class="spinner"></div>
-        <p style="margin-top: 20px;">INITIALIZING SYSTEM...</p>
-        <p style="font-size: 12px; color: #666;">Waiting for Webcam & AI Models</p>
+        <p style="margin-top: 20px;" id="loader-text">INITIALIZING SYSTEM...</p>
+        <p style="font-size: 12px; color: #666;">Attempting to load AI Hand Tracking...</p>
     </div>
 
-    <div id="status">System: Offline</div>
+    <div id="status">System: Checking...</div>
 
     <div id="canvas-container"></div>
 
-    <!-- Sci-Fi UI Panel -->
     <div id="info-panel">
         <div class="sci-fi-title" id="p-name">LOADING...</div>
         <div class="sci-fi-row">
@@ -165,7 +165,6 @@
         <div class="deco-line"></div>
     </div>
 
-    <!-- Import Maps for Three.js and MediaPipe -->
     <script type="importmap">
         {
             "imports": {
@@ -180,155 +179,142 @@
         import * as THREE from 'three';
         import { FilesetResolver, HandLandmarker } from '@mediapipe/tasks-vision';
 
-        // --- Configuration & Data ---
+        // --- Data ---
         const IMAGE_URLS = [
             "https://static.nike.com/a/images/q_auto:eco/t_product_v1/f_auto/dpr_1.0/h_594,c_limit/3989822d-5079-4b58-95cc-d884a12d5be8/%E3%83%8A%E3%82%A4%E3%82%AD-%E3%82%A8%E3%82%A2-%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B9-1-07-%E3%82%A6%E3%82%A3%E3%83%A1%E3%83%B3%E3%82%BA%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA-Csdlzsbt.png",
-            "https://static.nike.com/a/images/q_auto:eco/t_product_v1/f_auto/dpr_1.0/h_594,c_limit/c5f06bdd-914b-4197-96bc-37d67b34c054/%E3%83%8A%E3%82%A4%E3%82%AD-%E3%82%A8%E3%82%A2-%E3%83%95%E3%82%A9%E3%83%BC%E3%82%B9-1-07-%E3%82%A6%E3%82%A3%E3%83%A1%E3%83%B3%E3%82%BA%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA-Csdlzsbt.png", // Duplicate logic for safety or replace if needed
             "https://static.nike.com/a/images/q_auto:eco/t_product_v1/f_auto/dpr_1.0/h_594,c_limit/c5f06bdd-914b-4197-96bc-37d67b34c054/%E3%83%8A%E3%82%A4%E3%82%AD-%E3%82%A8%E3%82%A2-%E3%83%AA%E3%83%95%E3%83%88-%E3%82%A6%E3%82%A3%E3%83%A1%E3%83%B3%E3%82%BA%E3%82%B7%E3%83%A5%E3%83%BC%E3%82%BA-ASOdehTz.png",
             "https://salomon.jp/cdn/shop/files/L47861800_0_GHO_XT-PATHWAYGTXVanill.png?v=1752547878&width=850",
             "https://www.skechers.com/dw/image/v2/BDCN_PRD/on/demandware.static/-/Library-Sites-SkechersSharedLibrary/default/dweddf4f88/images/2025-Images/Landing-Pages/boot-bf-space.jpg?sw=3000",
             "https://images.skechers.com/image;width=400%2Cformat=auto/177197_NVY_HERO_LG"
         ];
 
-        // Ensure we have correct data mapping
         const PRODUCT_DATA = [
-            { name: "NIKE AIR FORCE 1 '07", code: "DD8959-100", price: "$110.00", tech: "Nike Air" },
-            { name: "NIKE AIR FORCE 1 '07", code: "DD8959-100", price: "$110.00", tech: "Nike Air" }, // Fallback for 2nd
-            { name: "NIKE AIR RIFT", code: "DN1338-001", price: "$100.00", tech: "Split Toe / Air" },
-            { name: "SALOMON XT-PATHWAY", code: "L47861800", price: "$160.00", tech: "Gore-Tex / Contagrip" },
-            { name: "SKECHERS BOOT SPACE", code: "SKX-2025", price: "$85.00", tech: "Memory Foam" },
-            { name: "SKECHERS HERO LG", code: "177197", price: "$75.00", tech: "Arch Fit" }
+            { name: "NIKE AF1 '07", code: "DD8959-100", price: "$110.00", tech: "Nike Air" },
+            { name: "NIKE AIR RIFT", code: "DN1338-001", price: "$100.00", tech: "Split Toe" },
+            { name: "SALOMON XT", code: "L47861800", price: "$160.00", tech: "Gore-Tex" },
+            { name: "SKECHERS SPACE", code: "SKX-2025", price: "$85.00", tech: "Memory Foam" },
+            { name: "SKECHERS HERO", code: "177197", price: "$75.00", tech: "Arch Fit" }
         ];
 
-        // --- Global Variables ---
-        let scene, camera, renderer;
-        let video, videoTexture;
+        // --- Variables ---
+        let scene, camera, renderer, video, videoTexture;
         let handLandmarker;
         let lastVideoTime = -1;
+        let inputMode = "MOUSE"; // 'MOUSE' or 'HAND'
         
-        // Carousel Variables
+        // Carousel
         const cards = [];
         const group = new THREE.Group();
         const CARD_WIDTH = 3.5;
         const GAP = 1.0;
         const TOTAL_WIDTH = (CARD_WIDTH + GAP) * IMAGE_URLS.length;
         
-        // Interaction State
+        // Logic
         let scrollOffset = 0;
         let baseSpeed = 0.02;
         let gestureSpeed = 0;
         let isZooming = false;
         let focusedIndex = -1;
-        let pinchDistance = 1;
         
-        // UI Elements
+        // Mouse specific
+        let mouseX = 0;
+        let targetScroll = 0;
+        
+        // UI
+        const loader = document.getElementById('loader');
+        const loaderText = document.getElementById('loader-text');
+        const statusDiv = document.getElementById('status');
         const uiPanel = document.getElementById('info-panel');
         const uiName = document.getElementById('p-name');
         const uiCode = document.getElementById('p-code');
         const uiPrice = document.getElementById('p-price');
         const uiTech = document.getElementById('p-tech');
-        const loader = document.getElementById('loader');
-        const statusDiv = document.getElementById('status');
 
         async function init() {
-            // 1. Setup Three.js
+            // 1. Three.js Setup
             scene = new THREE.Scene();
             camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
             camera.position.z = 10;
-
             renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.getElementById('canvas-container').appendChild(renderer.domElement);
 
-            // 2. Setup Webcam as Background
-            video = document.createElement('video');
-            video.autoplay = true;
-            video.playsInline = true;
-            
-            // Get Webcam Stream
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { width: 1280, height: 720, facingMode: "user" } 
-                });
-                video.srcObject = stream;
-                await new Promise((resolve) => { video.onloadedmetadata = resolve; });
-                video.play();
-                
-                // Create Video Background Plane
-                videoTexture = new THREE.VideoTexture(video);
-                videoTexture.colorSpace = THREE.SRGBColorSpace;
-                
-                const bgGeometry = new THREE.PlaneGeometry(25, 15); // Large enough to cover screen
-                const bgMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, depthWrite: false });
-                const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
-                bgMesh.position.z = -5; // Behind everything
-                // Scale to cover (simple contain logic)
-                const aspect = window.innerWidth / window.innerHeight;
-                if(aspect > 1) bgMesh.scale.set(aspect, 1, 1);
-                else bgMesh.scale.set(1, 1/aspect, 1);
-                
-                scene.add(bgMesh);
-                
-            } catch (err) {
-                console.error("Webcam Error:", err);
-                statusDiv.innerText = "Error: Camera Access Denied";
-                return;
-            }
-
-            // 3. Create Carousel
+            // 2. Load Textures
             const textureLoader = new THREE.TextureLoader();
-            // Allow cross origin
             textureLoader.crossOrigin = 'Anonymous';
-
             IMAGE_URLS.forEach((url, i) => {
-                // Use a proxy or CORS handling if needed inside real production
-                // For this demo, we assume standard image loading behavior
                 textureLoader.load(url, (texture) => {
                     texture.colorSpace = THREE.SRGBColorSpace;
-                    
-                    // Maintain aspect ratio
                     const imgAspect = texture.image.width / texture.image.height;
                     const geometry = new THREE.PlaneGeometry(CARD_WIDTH, CARD_WIDTH / imgAspect);
-                    
-                    const material = new THREE.MeshBasicMaterial({ 
-                        map: texture, 
-                        transparent: true,
-                        side: THREE.DoubleSide
-                    });
-                    
+                    const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, side: THREE.DoubleSide });
                     const mesh = new THREE.Mesh(geometry, material);
-                    mesh.userData = { id: i, originalScale: 1 };
-                    
-                    // Initial Layout
+                    mesh.userData = { id: i };
                     mesh.position.x = i * (CARD_WIDTH + GAP);
-                    
                     group.add(mesh);
                     cards.push(mesh);
-                }, undefined, (err) => {
-                    console.warn("Texture error", err);
-                });
+                }, undefined, (err) => console.log('Texture error', err));
             });
-
             scene.add(group);
 
-            // 4. Setup MediaPipe
-            await setupMediaPipe();
+            // 3. Webcam Setup (Always try this)
+            await setupWebcam();
+
+            // 4. Try loading AI (with timeout)
+            try {
+                // Set a timeout promise
+                const timeout = new Promise((_, reject) => setTimeout(() => reject("Timeout"), 5000));
+                // Race between setup and timeout
+                await Promise.race([setupMediaPipe(), timeout]);
+                
+                inputMode = "HAND";
+                statusDiv.innerHTML = "System: ONLINE<br>Mode: HAND GESTURE";
+            } catch (err) {
+                console.warn("AI Load Failed or Timed Out:", err);
+                inputMode = "MOUSE";
+                statusDiv.innerHTML = "System: ONLINE (AI Failed)<br>Mode: MOUSE / TOUCH";
+                setupMouseControls();
+            }
 
             // 5. Hide Loader
             loader.style.opacity = 0;
             setTimeout(() => loader.remove(), 500);
-            statusDiv.innerText = "System: Online | Hand Tracking Active";
 
-            // 6. Start Loop
+            // 6. Loop
             window.addEventListener('resize', onWindowResize);
             animate();
         }
 
+        async function setupWebcam() {
+            video = document.createElement('video');
+            video.autoplay = true;
+            video.playsInline = true;
+            video.muted = true;
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720, facingMode: "user" } });
+                video.srcObject = stream;
+                await new Promise((r) => video.onloadedmetadata = r);
+                video.play();
+                
+                videoTexture = new THREE.VideoTexture(video);
+                videoTexture.colorSpace = THREE.SRGBColorSpace;
+                const bgGeometry = new THREE.PlaneGeometry(25, 15);
+                const bgMaterial = new THREE.MeshBasicMaterial({ map: videoTexture, depthWrite: false });
+                const bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+                bgMesh.position.z = -5;
+                const aspect = window.innerWidth / window.innerHeight;
+                bgMesh.scale.set(aspect > 1 ? aspect : 1, aspect > 1 ? 1 : 1/aspect, 1);
+                scene.add(bgMesh);
+            } catch (e) {
+                console.error("Webcam denied", e);
+                statusDiv.innerText = "Error: Webcam Blocked";
+            }
+        }
+
         async function setupMediaPipe() {
-            const vision = await FilesetResolver.forVisionTasks(
-                "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm"
-            );
+            loaderText.innerText = "DOWNLOADING AI MODELS...";
+            const vision = await FilesetResolver.forVisionTasks("https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/wasm");
             handLandmarker = await HandLandmarker.createFromOptions(vision, {
                 baseOptions: {
                     modelAssetPath: `https://storage.googleapis.com/mediapipe-models/hand_landmarker/hand_landmarker/float16/1/hand_landmarker.task`,
@@ -339,79 +325,63 @@
             });
         }
 
-        function detectGestures() {
-            if (!handLandmarker || !video || video.readyState < 2) return;
+        function setupMouseControls() {
+            // Mouse Movement = Speed
+            document.addEventListener('mousemove', (e) => {
+                mouseX = (e.clientX / window.innerWidth) * 2 - 1; // -1 to 1
+                gestureSpeed = -mouseX * 0.1; // Reverse for natural feel
+            });
+            // Click/Hold = Zoom
+            document.addEventListener('mousedown', () => isZooming = true);
+            document.addEventListener('mouseup', () => isZooming = false);
+            // Touch support
+            document.addEventListener('touchstart', () => isZooming = true);
+            document.addEventListener('touchend', () => isZooming = false);
+        }
 
-            // Run detection on video frame
+        function detectGestures() {
+            if (inputMode !== "HAND" || !handLandmarker || !video) return;
+
             if (video.currentTime !== lastVideoTime) {
                 lastVideoTime = video.currentTime;
                 const results = handLandmarker.detectForVideo(video, performance.now());
-
                 if (results.landmarks && results.landmarks.length > 0) {
-                    const landmarks = results.landmarks[0];
-                    
-                    // 1. Zoom Logic (Pinch: Thumb Tip (4) vs Index Tip (8))
-                    const thumbTip = landmarks[4];
-                    const indexTip = landmarks[8];
-                    
-                    // Calculate Euclidean distance in 3D (normalized coords)
-                    const dist = Math.sqrt(
-                        Math.pow(thumbTip.x - indexTip.x, 2) +
-                        Math.pow(thumbTip.y - indexTip.y, 2)
-                    );
+                    const lm = results.landmarks[0];
+                    const thumb = lm[4];
+                    const index = lm[8];
+                    const dist = Math.sqrt(Math.pow(thumb.x - index.x, 2) + Math.pow(thumb.y - index.y, 2));
 
-                    // Threshold for Pinch
-                    if (dist < 0.06) {
-                        isZooming = true;
-                        statusDiv.innerText = "Mode: ANALYZE (Zoom)";
-                    } else {
-                        isZooming = false;
-                        statusDiv.innerText = "Mode: BROWSE";
-                    }
-
-                    // 2. Speed Logic (Hand Position X)
-                    // Center of screen is x=0.5. Left < 0.5, Right > 0.5
-                    // Note: Webcam is mirrored usually.
-                    const handX = landmarks[9].x; // Middle finger knuckle as center
+                    // Logic: Pinch = Zoom
+                    isZooming = dist < 0.06;
                     
-                    // Map 0..1 to -Speed..+Speed
-                    // Reverse direction because webcam is usually mirrored for user feel
+                    // Logic: Hand X = Speed
+                    const handX = lm[9].x; 
                     gestureSpeed = (0.5 - handX) * 0.2; 
-
+                    
+                    statusDiv.innerHTML = `Mode: HAND<br>State: ${isZooming ? 'ZOOM' : 'SCROLL'}`;
                 } else {
-                    // No hand detected
                     gestureSpeed = 0;
                     isZooming = false;
-                    statusDiv.innerText = "Mode: IDLE (No Hand)";
+                    statusDiv.innerHTML = "Mode: HAND<br>State: SEARCHING...";
                 }
             }
         }
 
         function updateCarousel() {
-            // Apply Speed
             if (!isZooming) {
                 scrollOffset -= (baseSpeed + gestureSpeed);
-                // Hide Info Panel
                 uiPanel.classList.remove('active');
             }
 
-            // Find center-most item index for Zooming
             let minDist = 9999;
             let closestMesh = null;
-            let centerX = 0; // World center X
 
             cards.forEach((mesh, index) => {
-                // Infinite Scroll Logic
-                // Calculate virtual position based on offset
                 let virtualX = (index * (CARD_WIDTH + GAP) + scrollOffset) % TOTAL_WIDTH;
-                
-                // Adjust for wrapping to keep items centered
                 if (virtualX > TOTAL_WIDTH / 2) virtualX -= TOTAL_WIDTH;
                 if (virtualX < -TOTAL_WIDTH / 2) virtualX += TOTAL_WIDTH;
 
-                // Base movement
                 if (!isZooming) {
-                    // Smooth return to scroll line
                     mesh.position.x = THREE.MathUtils.lerp(mesh.position.x, virtualX, 0.1);
                     mesh.position.y = THREE.MathUtils.lerp(mesh.position.y, 0, 0.1);
                     mesh.position.z = THREE.MathUtils.lerp(mesh.position.z, 0, 0.1);
@@ -419,7 +389,6 @@
                     mesh.rotation.y = THREE.MathUtils.lerp(mesh.rotation.y, 0, 0.1);
                 }
 
-                // Check distance to center to find focused item
                 const distToCenter = Math.abs(mesh.position.x);
                 if (distToCenter < minDist) {
                     minDist = distToCenter;
@@ -428,42 +397,24 @@
                 }
             });
 
-            // Focus Logic
             if (isZooming && closestMesh) {
-                // Move focused mesh to front center
-                closestMesh.position.x = THREE.MathUtils.lerp(closestMesh.position.x, 0, 0.1); // Center X
-                closestMesh.position.y = THREE.MathUtils.lerp(closestMesh.position.y, 0.5, 0.1); // Slightly up
-                closestMesh.position.z = THREE.MathUtils.lerp(closestMesh.position.z, 4, 0.1); // Bring closer
-                
-                // Scale Up
+                closestMesh.position.x = THREE.MathUtils.lerp(closestMesh.position.x, 0, 0.1);
+                closestMesh.position.y = THREE.MathUtils.lerp(closestMesh.position.y, 0.5, 0.1);
+                closestMesh.position.z = THREE.MathUtils.lerp(closestMesh.position.z, 5, 0.1);
                 closestMesh.scale.setScalar(THREE.MathUtils.lerp(closestMesh.scale.x, 1.8, 0.1));
-                
-                // Slight Rotation
                 closestMesh.rotation.y += 0.01;
 
-                // Update UI
                 updateUI(focusedIndex);
                 uiPanel.classList.add('active');
-
-                // Push others away slightly (Visual polish)
+                
                 cards.forEach(m => {
-                    if (m !== closestMesh) {
-                         m.position.z = THREE.MathUtils.lerp(m.position.z, -2, 0.1);
-                         m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, 0.3, 0.1);
-                    } else {
-                        m.material.opacity = 1;
-                    }
+                    if (m !== closestMesh) m.position.z = -2;
                 });
-            } else {
-                // Reset Opacity
-                cards.forEach(m => m.material.opacity = THREE.MathUtils.lerp(m.material.opacity, 1, 0.1));
             }
         }
 
         function updateUI(index) {
-            // Prevent redundant DOM updates
-            if (uiName.innerText === PRODUCT_DATA[index].name && uiPanel.classList.contains('active')) return;
-
+            if(!PRODUCT_DATA[index]) return;
             const data = PRODUCT_DATA[index];
             uiName.innerText = data.name;
             uiCode.innerText = data.code;
@@ -479,16 +430,12 @@
 
         function animate() {
             requestAnimationFrame(animate);
-
             detectGestures();
             updateCarousel();
-
             renderer.render(scene, camera);
         }
 
-        // Start
         init();
-
     </script>
 </body>
 </html>
